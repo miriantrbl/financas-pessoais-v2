@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { collection, onSnapshot, addDoc, deleteDoc, doc, setDoc, updateDoc, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
 import type { Receita, Despesa, Cartao, CompraCartao, Meta, Categoria, Tab, Theme, HomeVariant, ModalType } from '../types';
 import { defaultIncomes, defaultExpenses, defaultCards, defaultPurchases, defaultSavings, defaultCategories } from './data';
 import { uid } from '../utils';
@@ -17,6 +19,7 @@ interface AppState {
   cards: Cartao[];
   purchases: CompraCartao[];
   savings: Meta[];
+  loaded: boolean;
 }
 
 interface AppActions {
@@ -51,6 +54,13 @@ function load<T>(key: string, def: T): T {
   } catch { return def; }
 }
 
+async function seedCollection(name: string, items: { id: string; [key: string]: unknown }[]) {
+  for (const item of items) {
+    const { id, ...data } = item;
+    await setDoc(doc(db, name, id), data);
+  }
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(() => ({
     theme: load('theme', 'light') as Theme,
@@ -60,36 +70,65 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     filterCat: 'Todas',
     selectedCard: null,
     modal: null,
-    incomes: load('incomes', defaultIncomes),
-    expenses: load('expenses', defaultExpenses),
-    categories: load('categories', defaultCategories),
-    cards: load('cards', defaultCards),
-    purchases: load('purchases', defaultPurchases),
-    savings: load('savings', defaultSavings),
+    incomes: [],
+    expenses: [],
+    categories: [],
+    cards: [],
+    purchases: [],
+    savings: [],
+    loaded: false,
   }));
+
+  // Seed default data if collections are empty
+  useEffect(() => {
+    async function init() {
+      const snap = await getDocs(collection(db, 'incomes'));
+      if (snap.empty) {
+        await seedCollection('incomes', defaultIncomes);
+        await seedCollection('expenses', defaultExpenses);
+        await seedCollection('cards', defaultCards);
+        await seedCollection('purchases', defaultPurchases);
+        await seedCollection('savings', defaultSavings);
+        await seedCollection('categories', defaultCategories.map((c, i) => ({ ...c, id: 'cat' + i })));
+      }
+    }
+    init();
+  }, []);
+
+  // Listen to Firestore collections
+  useEffect(() => {
+    const unsubs = [
+      onSnapshot(collection(db, 'incomes'), snap => {
+        const items = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Receita[];
+        setState(s => ({ ...s, incomes: items }));
+      }),
+      onSnapshot(collection(db, 'expenses'), snap => {
+        const items = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Despesa[];
+        setState(s => ({ ...s, expenses: items }));
+      }),
+      onSnapshot(collection(db, 'categories'), snap => {
+        const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as unknown)) as Categoria[];
+        setState(s => ({ ...s, categories: items, loaded: true }));
+      }),
+      onSnapshot(collection(db, 'cards'), snap => {
+        const items = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Cartao[];
+        setState(s => ({ ...s, cards: items }));
+      }),
+      onSnapshot(collection(db, 'purchases'), snap => {
+        const items = snap.docs.map(d => ({ id: d.id, ...d.data() })) as CompraCartao[];
+        setState(s => ({ ...s, purchases: items }));
+      }),
+      onSnapshot(collection(db, 'savings'), snap => {
+        const items = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Meta[];
+        setState(s => ({ ...s, savings: items }));
+      }),
+    ];
+    return () => unsubs.forEach(u => u());
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('theme', JSON.stringify(state.theme));
   }, [state.theme]);
-
-  useEffect(() => {
-    localStorage.setItem('incomes', JSON.stringify(state.incomes));
-  }, [state.incomes]);
-  useEffect(() => {
-    localStorage.setItem('expenses', JSON.stringify(state.expenses));
-  }, [state.expenses]);
-  useEffect(() => {
-    localStorage.setItem('categories', JSON.stringify(state.categories));
-  }, [state.categories]);
-  useEffect(() => {
-    localStorage.setItem('cards', JSON.stringify(state.cards));
-  }, [state.cards]);
-  useEffect(() => {
-    localStorage.setItem('purchases', JSON.stringify(state.purchases));
-  }, [state.purchases]);
-  useEffect(() => {
-    localStorage.setItem('savings', JSON.stringify(state.savings));
-  }, [state.savings]);
 
   const set = useCallback((patch: Partial<AppState>) => setState(s => ({ ...s, ...patch })), []);
 
@@ -112,20 +151,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSelectedCard: id => set({ selectedCard: id }),
     openModal: m => set({ modal: m }),
     closeModal: () => set({ modal: null }),
-    addIncome: r => setState(s => ({ ...s, incomes: [...s.incomes, { ...r, id: uid() }] })),
-    removeIncome: id => setState(s => ({ ...s, incomes: s.incomes.filter(i => i.id !== id) })),
-    addExpense: e => setState(s => ({ ...s, expenses: [...s.expenses, { ...e, id: uid() }] })),
-    removeExpense: id => setState(s => ({ ...s, expenses: s.expenses.filter(i => i.id !== id) })),
-    addCategory: c => setState(s => ({ ...s, categories: [...s.categories, { ...c }] })),
-    addCard: c => setState(s => ({ ...s, cards: [...s.cards, { ...c, id: uid() }] })),
-    addPurchase: p => setState(s => ({ ...s, purchases: [...s.purchases, { ...p, id: uid() }] })),
-    removePurchase: id => setState(s => ({ ...s, purchases: s.purchases.filter(i => i.id !== id) })),
-    addMeta: m => setState(s => ({ ...s, savings: [...s.savings, { ...m, id: uid() }] })),
-    deposit: (metaId, amount) => setState(s => ({
-      ...s,
-      savings: s.savings.map(m => m.id === metaId ? { ...m, current: m.current + amount } : m)
-    })),
+    addIncome: r => { const id = uid(); setDoc(doc(db, 'incomes', id), r); },
+    removeIncome: id => deleteDoc(doc(db, 'incomes', id)),
+    addExpense: e => { const id = uid(); setDoc(doc(db, 'expenses', id), e); },
+    removeExpense: id => deleteDoc(doc(db, 'expenses', id)),
+    addCategory: c => { const id = uid(); setDoc(doc(db, 'categories', id), c); },
+    addCard: c => { const id = uid(); setDoc(doc(db, 'cards', id), c); },
+    addPurchase: p => { const id = uid(); setDoc(doc(db, 'purchases', id), p); },
+    removePurchase: id => deleteDoc(doc(db, 'purchases', id)),
+    addMeta: m => { const id = uid(); setDoc(doc(db, 'savings', id), m); },
+    deposit: (metaId, amount) => {
+      const meta = state.savings.find(m => m.id === metaId);
+      if (meta) updateDoc(doc(db, 'savings', metaId), { current: meta.current + amount });
+    },
   };
+
+  if (!state.loaded) {
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: '#F4F3EF', fontFamily: 'Hanken Grotesk, sans-serif',
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 32, fontWeight: 800, color: '#1F7A5C', marginBottom: 8 }}>saldo</div>
+          <div style={{ fontSize: 14, color: '#6E6A62' }}>carregando...</div>
+        </div>
+      </div>
+    );
+  }
 
   return <Ctx.Provider value={{ ...state, ...actions }}>{children}</Ctx.Provider>;
 }
