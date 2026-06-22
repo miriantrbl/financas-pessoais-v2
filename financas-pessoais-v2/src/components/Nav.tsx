@@ -8,6 +8,7 @@ const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'despesas', label: 'Despesas', icon: <ArrowDownIcon /> },
   { id: 'cartoes', label: 'Cartões', icon: <CardIcon /> },
   { id: 'poupanca', label: 'Poupança', icon: <PiggyIcon /> },
+  { id: 'emprestimos', label: 'Empréstimos', icon: <LoanIcon /> },
 ];
 
 export default function Nav() {
@@ -61,4 +62,7 @@ function CardIcon() {
 }
 function PiggyIcon() {
   return <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 5c-1.5 0-2.8.4-3.9 1-1.2-2-3.2-3.4-5.6-3.4C5.9 2.6 3 5.7 3 9.6 3 14 5.4 17 9 18v3h6v-3c1-.3 1.9-.8 2.7-1.4L19 17l2-2-1.5-1.5c.3-.7.5-1.6.5-2.5 0-3.3-1.8-5-1-6zm0 0c0-1.1.9-2 2-2"/></svg>;
+}
+function LoanIcon() {
+  return <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>;
 }

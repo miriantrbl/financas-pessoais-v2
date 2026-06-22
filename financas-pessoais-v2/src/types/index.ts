@@ -50,7 +50,17 @@ export type Meta = {
   monthly: number;
 };
 
-export type Tab = 'inicio' | 'receitas' | 'despesas' | 'cartoes' | 'poupanca';
+export type Emprestimo = {
+  id: string;
+  desc: string;
+  total: number;
+  installments: number;
+  startY: number;
+  startM: number;
+  color: string;
+};
+
+export type Tab = 'inicio' | 'receitas' | 'despesas' | 'cartoes' | 'poupanca' | 'emprestimos';
 export type Theme = 'light' | 'dark';
 export type HomeVariant = 'A' | 'B';
 
@@ -62,4 +72,6 @@ export type ModalType =
   | { type: 'categoria' }
   | { type: 'depositar'; metaId: string }
   | { type: 'meta' }
+  | { type: 'editar-meta'; metaId: string }
+  | { type: 'emprestimo' }
   | null;

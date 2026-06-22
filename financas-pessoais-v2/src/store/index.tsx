@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, setDoc, updateDoc, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, deleteDoc, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import type { Receita, Despesa, Cartao, CompraCartao, Meta, Categoria, Tab, Theme, HomeVariant, ModalType } from '../types';
-import { defaultIncomes, defaultExpenses, defaultCards, defaultPurchases, defaultSavings, defaultCategories } from './data';
+import type { Receita, Despesa, Cartao, CompraCartao, Meta, Categoria, Emprestimo, Tab, Theme, HomeVariant, ModalType } from '../types';
 import { uid } from '../utils';
 
 interface AppState {
@@ -19,6 +18,7 @@ interface AppState {
   cards: Cartao[];
   purchases: CompraCartao[];
   savings: Meta[];
+  emprestimos: Emprestimo[];
   loaded: boolean;
 }
 
@@ -42,7 +42,11 @@ interface AppActions {
   addPurchase: (p: Omit<CompraCartao, 'id'>) => void;
   removePurchase: (id: string) => void;
   addMeta: (m: Omit<Meta, 'id'>) => void;
+  updateMeta: (id: string, m: Omit<Meta, 'id'>) => void;
+  removeMeta: (id: string) => void;
   deposit: (metaId: string, amount: number) => void;
+  addEmprestimo: (e: Omit<Emprestimo, 'id'>) => void;
+  removeEmprestimo: (id: string) => void;
 }
 
 const Ctx = createContext<(AppState & AppActions) | null>(null);
@@ -52,13 +56,6 @@ function load<T>(key: string, def: T): T {
     const v = localStorage.getItem(key);
     return v ? JSON.parse(v) : def;
   } catch { return def; }
-}
-
-async function seedCollection(name: string, items: { id: string; [key: string]: unknown }[]) {
-  for (const item of items) {
-    const { id, ...data } = item;
-    await setDoc(doc(db, name, id), data);
-  }
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -76,24 +73,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     cards: [],
     purchases: [],
     savings: [],
+    emprestimos: [],
     loaded: false,
   }));
-
-  // Seed default data if collections are empty
-  useEffect(() => {
-    async function init() {
-      const snap = await getDocs(collection(db, 'incomes'));
-      if (snap.empty) {
-        await seedCollection('incomes', defaultIncomes);
-        await seedCollection('expenses', defaultExpenses);
-        await seedCollection('cards', defaultCards);
-        await seedCollection('purchases', defaultPurchases);
-        await seedCollection('savings', defaultSavings);
-        await seedCollection('categories', defaultCategories.map((c, i) => ({ ...c, id: 'cat' + i })));
-      }
-    }
-    init();
-  }, []);
 
   // Listen to Firestore collections
   useEffect(() => {
@@ -121,6 +103,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       onSnapshot(collection(db, 'savings'), snap => {
         const items = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Meta[];
         setState(s => ({ ...s, savings: items }));
+      }),
+      onSnapshot(collection(db, 'emprestimos'), snap => {
+        const items = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Emprestimo[];
+        setState(s => ({ ...s, emprestimos: items }));
       }),
     ];
     return () => unsubs.forEach(u => u());
@@ -160,10 +146,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addPurchase: p => { const id = uid(); setDoc(doc(db, 'purchases', id), p); },
     removePurchase: id => deleteDoc(doc(db, 'purchases', id)),
     addMeta: m => { const id = uid(); setDoc(doc(db, 'savings', id), m); },
+    updateMeta: (id, m) => updateDoc(doc(db, 'savings', id), { ...m }),
+    removeMeta: id => deleteDoc(doc(db, 'savings', id)),
     deposit: (metaId, amount) => {
       const meta = state.savings.find(m => m.id === metaId);
       if (meta) updateDoc(doc(db, 'savings', metaId), { current: meta.current + amount });
     },
+    addEmprestimo: e => { const id = uid(); setDoc(doc(db, 'emprestimos', id), e); },
+    removeEmprestimo: id => deleteDoc(doc(db, 'emprestimos', id)),
   };
 
   if (!state.loaded) {

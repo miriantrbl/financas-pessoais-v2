@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../store';
-import { MES_ABR, MES_FULL, parseMoney, CAT_PALETTE, uid, fmtShort } from '../utils';
+import { MES_ABR, MES_FULL, parseMoney, CAT_PALETTE, uid, fmtShort, fmt } from '../utils';
 
 const GRADIENTS = [
   'linear-gradient(135deg,#9b2fe0,#5b07a0)',
@@ -359,6 +359,94 @@ function ModalMeta() {
   );
 }
 
+// ── Editar Meta ───────────────────────────────────────────────
+function ModalEditarMeta({ metaId }: { metaId: string }) {
+  const { closeModal, updateMeta, savings } = useApp();
+  const meta = savings.find(m => m.id === metaId);
+  const [form, setForm] = useState({
+    name: meta?.name || '',
+    target: meta ? String(meta.target) : '',
+    current: meta ? String(meta.current) : '',
+    monthly: meta ? String(meta.monthly) : '',
+    color: meta?.color || CAT_PALETTE[0],
+  });
+  const f = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) => setForm(s => ({ ...s, [k]: e.target.value }));
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateMeta(metaId, { name: form.name, target: parseMoney(form.target), current: parseMoney(form.current), monthly: parseMoney(form.monthly), color: form.color });
+    closeModal();
+  };
+  return (
+    <ModalCard onClose={closeModal}>
+      <ModalHeader title="Editar meta" onClose={closeModal} />
+      <form onSubmit={submit}>
+        <Field label="Nome da meta"><input style={inp} value={form.name} onChange={f('name')} required /></Field>
+        <Field label="Valor da meta (R$)"><input style={inp} value={form.target} onChange={f('target')} required /></Field>
+        <Field label="Já guardado (R$)"><input style={inp} value={form.current} onChange={f('current')} /></Field>
+        <Field label="Aporte mensal (R$)"><input style={inp} value={form.monthly} onChange={f('monthly')} /></Field>
+        <Field label="Cor">
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {CAT_PALETTE.map(c => (
+              <div key={c} onClick={() => setForm(s => ({ ...s, color: c }))}
+                style={{ width: 32, height: 32, borderRadius: '50%', background: c, cursor: 'pointer', outline: form.color === c ? '2.5px solid var(--ink)' : 'none', outlineOffset: 2 }} />
+            ))}
+          </div>
+        </Field>
+        <SubmitBtn label="Salvar alterações" />
+      </form>
+    </ModalCard>
+  );
+}
+
+// ── Novo Empréstimo ───────────────────────────────────────────
+function ModalEmprestimo() {
+  const { closeModal, addEmprestimo } = useApp();
+  const [form, setForm] = useState({ desc: '', total: '', installments: '', startY: String(new Date().getFullYear()), startM: String(new Date().getMonth()), color: CAT_PALETTE[3] });
+  const f = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) => setForm(s => ({ ...s, [k]: e.target.value }));
+  const total = parseMoney(form.total);
+  const inst = Math.max(1, parseInt(form.installments) || 1);
+  const valorParcela = inst > 0 ? total / inst : 0;
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    addEmprestimo({ desc: form.desc, total, installments: inst, startY: parseInt(form.startY), startM: parseInt(form.startM), color: form.color });
+    closeModal();
+  };
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  return (
+    <ModalCard onClose={closeModal}>
+      <ModalHeader title="Novo empréstimo" onClose={closeModal} />
+      <form onSubmit={submit}>
+        <Field label="Descrição"><input style={inp} value={form.desc} onChange={f('desc')} required placeholder="ex: Empréstimo pessoal Banco X" /></Field>
+        <Field label="Valor total (R$)"><input style={inp} value={form.total} onChange={f('total')} required placeholder="0,00" /></Field>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ flex: 1 }}><Field label="Nº de parcelas"><input type="number" style={inp} value={form.installments} onChange={f('installments')} required min={1} /></Field></div>
+          <div style={{ flex: 1 }}><Field label="Ano início"><input type="number" style={inp} value={form.startY} onChange={f('startY')} required /></Field></div>
+        </div>
+        <Field label="Mês início">
+          <select style={inp} value={form.startM} onChange={e => setForm(s => ({ ...s, startM: e.target.value }))}>
+            {meses.map((m, i) => <option key={i} value={i}>{m}</option>)}
+          </select>
+        </Field>
+        {total > 0 && (
+          <div style={{ background: 'var(--surface2)', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
+            <div style={{ fontSize: 12, color: 'var(--ink3)', marginBottom: 4 }}>Valor por parcela</div>
+            <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 18, color: 'var(--neg)' }}>{MES_ABR && fmt(valorParcela)}</div>
+          </div>
+        )}
+        <Field label="Cor">
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {CAT_PALETTE.map(c => (
+              <div key={c} onClick={() => setForm(s => ({ ...s, color: c }))}
+                style={{ width: 32, height: 32, borderRadius: '50%', background: c, cursor: 'pointer', outline: form.color === c ? '2.5px solid var(--ink)' : 'none', outlineOffset: 2 }} />
+            ))}
+          </div>
+        </Field>
+        <SubmitBtn label="Salvar empréstimo" />
+      </form>
+    </ModalCard>
+  );
+}
+
 export default function Modal() {
   const { modal, closeModal } = useApp();
   if (!modal) return null;
@@ -371,6 +459,8 @@ export default function Modal() {
     case 'categoria': return <ModalCategoria />;
     case 'depositar': return <ModalDepositar metaId={modal.metaId} />;
     case 'meta': return <ModalMeta />;
+    case 'editar-meta': return <ModalEditarMeta metaId={modal.metaId} />;
+    case 'emprestimo': return <ModalEmprestimo />;
     default: return null;
   }
 }

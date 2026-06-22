@@ -3,7 +3,7 @@ import { useApp } from '../store';
 import { fmt } from '../utils';
 
 export default function Poupanca() {
-  const { savings, openModal } = useApp();
+  const { savings, openModal, removeMeta } = useApp();
 
   const totalGuardado = savings.reduce((s, m) => s + m.current, 0);
   const totalMensal = savings.reduce((s, m) => s + m.monthly, 0);
@@ -53,6 +53,29 @@ export default function Poupanca() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 15, fontWeight: 700 }}>{m.name}</div>
                   <div style={{ fontSize: 12.5, color: 'var(--ink3)' }}>{Math.round(pct)}% concluído</div>
+                </div>
+                {/* Ações */}
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button
+                    onClick={() => openModal({ type: 'editar-meta', metaId: m.id })}
+                    title="Editar"
+                    style={{ color: 'var(--ink3)', padding: 6, borderRadius: 7, background: 'var(--surface2)', border: '1px solid var(--border)' }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => { if (confirm('Excluir esta meta?')) removeMeta(m.id); }}
+                    title="Excluir"
+                    style={{ color: 'var(--neg)', padding: 6, borderRadius: 7, background: 'var(--surface2)', border: '1px solid var(--border)' }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                      <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                    </svg>
+                  </button>
                 </div>
               </div>
 

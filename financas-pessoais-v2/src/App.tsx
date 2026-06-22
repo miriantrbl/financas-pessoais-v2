@@ -12,6 +12,7 @@ import Receitas from './views/Receitas';
 import Despesas from './views/Despesas';
 import Cartoes from './views/Cartoes';
 import Poupanca from './views/Poupanca';
+import Emprestimos from './views/Emprestimos';
 import './App.css';
 
 function Inner({ user }: { user: User }) {
@@ -32,6 +33,7 @@ function Inner({ user }: { user: User }) {
           {activeTab === 'despesas' && <Despesas />}
           {activeTab === 'cartoes' && <Cartoes />}
           {activeTab === 'poupanca' && <Poupanca />}
+          {activeTab === 'emprestimos' && <Emprestimos />}
         </div>
       </main>
       <Modal />
