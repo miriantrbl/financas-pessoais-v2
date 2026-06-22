@@ -1,8 +1,9 @@
 import React from 'react';
+import type { User } from 'firebase/auth';
 import { useApp } from '../store';
 import { MES_FULL } from '../utils';
 
-export default function Header() {
+export default function Header({ user, onSignOut }: { user: User; onSignOut: () => void }) {
   const { theme, setTheme, cur, prevMonth, nextMonth } = useApp();
 
   return (
@@ -62,6 +63,21 @@ export default function Header() {
               {t === 'light' ? 'Claro' : 'Escuro'}
             </button>
           ))}
+        </div>
+
+        {/* User + sign out */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {user.photoURL && (
+            <img src={user.photoURL} alt="" style={{ width: 30, height: 30, borderRadius: '50%' }} />
+          )}
+          <button
+            onClick={onSignOut}
+            style={{
+              fontSize: 13, fontWeight: 600, color: 'var(--ink3)',
+              padding: '6px 12px', borderRadius: 8,
+              border: '1px solid var(--border)',
+            }}
+          >Sair</button>
         </div>
       </div>
     </header>
