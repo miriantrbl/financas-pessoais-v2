@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #F4F3EF;
+  --surface: #FFFFFF;
+  --surface2: #FAF9F5;
+  --border: #E8E5DD;
+  --ink: #1B1A17;
+  --ink2: #6E6A62;
+  --ink3: #A7A299;
+  --accent: #1F7A5C;
+  --accent-dark: #155240;
+  --pos: #1F7A5C;
+  --neg: #C8463E;
+  --gold: #B6852A;
+  --shadow: 0 1px 2px rgba(20,18,12,.04), 0 10px 26px rgba(20,18,12,.06);
+  --pad: 20px;
+  --radius: 16px;
+}
+
+[data-theme="dark"] {
+  --bg: #111110;
+  --surface: #1B1B18;
+  --surface2: #232320;
+  --border: #312F2A;
+  --ink: #F1EFE9;
+  --ink2: #A39F96;
+  --ink3: #6C685F;
+  --accent: #3DBE8B;
+  --accent-dark: #2a8f66;
+  --pos: #46C28B;
+  --neg: #E8736A;
+  --gold: #D9A94A;
+  --shadow: 0 1px 2px rgba(0,0,0,.35), 0 12px 34px rgba(0,0,0,.4);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: 'Hanken Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  transition: background 0.2s, color 0.2s;
+}
+
+.num { font-family: 'Space Grotesk', sans-serif; }
+
+button { cursor: pointer; font-family: inherit; border: none; background: none; }
+input, select, textarea { font-family: inherit; }
+
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--pad);
+}
+
+.content-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 22px;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
