@@ -24,7 +24,7 @@ export function parseMoney(s: string): number {
   return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
 }
 
-import type { CompraCartao } from '../types';
+import type { CompraCartao, Emprestimo } from '../types';
 
 export function installmentInfo(p: CompraCartao, y: number, m: number) {
   const offset = (y - p.startY) * 12 + (m - p.startM);
@@ -41,6 +41,13 @@ export function installmentLabel(p: CompraCartao, y: number, m: number): string 
   const { parcelaAtual, restante, ultimoMes } = installmentInfo(p, y, m);
   if (!p.parc) return `Pagamento à vista · ${MES_ABR[p.startM]}/${p.startY}`;
   return `Parcela ${parcelaAtual} de ${p.installments} · faltam ${restante} · última em ${ultimoMes}`;
+}
+
+export function loanInstallmentInfo(e: Emprestimo, y: number, m: number) {
+  const offset = (y - e.startY) * 12 + (m - e.startM);
+  const included = offset >= 0 && offset < e.installments;
+  const valorParcela = e.total / e.installments;
+  return { included, valorParcela };
 }
 
 export function uid(): string {

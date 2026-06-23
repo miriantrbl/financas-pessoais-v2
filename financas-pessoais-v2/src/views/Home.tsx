@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useApp } from '../store';
-import { MES_ABR, MES_FULL, fmt, fmtSigned, fmtShort, installmentInfo, TODAY } from '../utils';
+import { MES_ABR, MES_FULL, fmt, fmtSigned, fmtShort, installmentInfo, loanInstallmentInfo, TODAY } from '../utils';
 import { LineChart, Line, Area, AreaChart, ResponsiveContainer, Tooltip } from 'recharts';
 
 function catColor(name: string, categories: { name: string; color: string }[]) {
@@ -8,7 +8,7 @@ function catColor(name: string, categories: { name: string; color: string }[]) {
 }
 
 export default function Home() {
-  const { homeVariant, setHomeVariant, cur, incomes, expenses, cards, purchases, savings, categories } = useApp();
+  const { homeVariant, setHomeVariant, cur, incomes, expenses, cards, purchases, savings, emprestimos, categories } = useApp();
 
   // Month stats
   const monthIncomes = incomes.filter(r => {
@@ -28,8 +28,17 @@ export default function Home() {
     return sum;
   }, [purchases, cur]);
 
+  const monthLoanTotal = useMemo(() => {
+    let sum = 0;
+    for (const e of emprestimos) {
+      const { included, valorParcela } = loanInstallmentInfo(e, cur.y, cur.m);
+      if (included) sum += valorParcela;
+    }
+    return sum;
+  }, [emprestimos, cur]);
+
   const totalInc = monthIncomes.reduce((s, r) => s + r.amount, 0);
-  const totalExp = monthExpenses.reduce((s, e) => s + e.amount, 0) + monthCardTotal;
+  const totalExp = monthExpenses.reduce((s, e) => s + e.amount, 0) + monthCardTotal + monthLoanTotal;
   const saldoMes = totalInc - totalExp;
   const totalGuardado = savings.reduce((s, m) => s + m.current, 0);
 
@@ -45,11 +54,16 @@ export default function Home() {
         const { included, valorParcela } = installmentInfo(p, cur.y, m);
         if (included) cardExp += valorParcela;
       }
-      accumulated += inc - exp - cardExp;
+      let loanExp = 0;
+      for (const e of emprestimos) {
+        const { included, valorParcela } = loanInstallmentInfo(e, cur.y, m);
+        if (included) loanExp += valorParcela;
+      }
+      accumulated += inc - exp - cardExp - loanExp;
       data.push({ month: MES_ABR[m], saldo: Math.round(accumulated) });
     }
     return data;
-  }, [incomes, expenses, purchases, cur]);
+  }, [incomes, expenses, purchases, emprestimos, cur]);
 
   const totalAnnualInc = useMemo(() => {
     let sum = 0;
@@ -68,10 +82,15 @@ export default function Home() {
         const { included, valorParcela } = installmentInfo(p, cur.y, m);
         if (included) cardExp += valorParcela;
       }
-      sum += exp + cardExp;
+      let loanExp = 0;
+      for (const e of emprestimos) {
+        const { included, valorParcela } = loanInstallmentInfo(e, cur.y, m);
+        if (included) loanExp += valorParcela;
+      }
+      sum += exp + cardExp + loanExp;
     }
     return sum;
-  }, [expenses, purchases, cur]);
+  }, [expenses, purchases, emprestimos, cur]);
 
   const saldoAnual = annualData[annualData.length - 1]?.saldo || 0;
   const taxaPoupanca = totalAnnualInc > 0 ? Math.round((totalAnnualInc - totalAnnualExp) / totalAnnualInc * 100) : 0;
@@ -137,7 +156,7 @@ export default function Home() {
       {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 14, marginBottom: 14 }}>
         <StatCard label="Receitas do mês" value={totalInc} color="var(--pos)" sub={MES_FULL[cur.m]} dotColor="var(--pos)" />
-        <StatCard label="Despesas do mês" value={totalExp} color="var(--neg)" sub="inclui faturas de cartão" dotColor="var(--neg)" />
+        <StatCard label="Despesas do mês" value={totalExp} color="var(--neg)" sub="inclui cartões e empréstimos" dotColor="var(--neg)" />
         <StatCard label="Saldo do mês" value={saldoMes} color={saldoMes >= 0 ? 'var(--pos)' : 'var(--neg)'} sub={saldoMes >= 0 ? 'sobrou este mês' : 'no vermelho'} dotColor={saldoMes >= 0 ? 'var(--pos)' : 'var(--neg)'} signed />
         <StatCard label="Guardado" value={totalGuardado} color="var(--gold)" sub="total em poupança" dotColor="var(--gold)" />
       </div>
@@ -166,6 +185,7 @@ export default function Home() {
           incomes={incomes}
           expenses={expenses}
           purchases={purchases}
+          emprestimos={emprestimos}
           cur={cur}
         />
       )}
@@ -253,7 +273,7 @@ function LayoutB({ saldoAnual, totalAnnualInc, totalAnnualExp, taxaPoupanca, ann
 }
 
 // ── Layout A ─────────────────────────────────────────────────
-function LayoutA({ annualData, catBreakdown, catTotal, nextInvoices, savings, categories, incomes, expenses, purchases, cur }: any) {
+function LayoutA({ annualData, catBreakdown, catTotal, nextInvoices, savings, categories, incomes, expenses, purchases, emprestimos, cur }: any) {
   // Last 6 months bar data
   const barData = useMemo(() => {
     const data = [];
@@ -268,10 +288,15 @@ function LayoutA({ annualData, catBreakdown, catTotal, nextInvoices, savings, ca
         const { included, valorParcela } = installmentInfo(p, y, m);
         if (included) cardExp += valorParcela;
       }
-      data.push({ month: MES_ABR[m], inc, exp: exp + cardExp });
+      let loanExp = 0;
+      for (const e of emprestimos) {
+        const { included, valorParcela } = loanInstallmentInfo(e, y, m);
+        if (included) loanExp += valorParcela;
+      }
+      data.push({ month: MES_ABR[m], inc, exp: exp + cardExp + loanExp });
     }
     return data;
-  }, [incomes, expenses, purchases, cur]);
+  }, [incomes, expenses, purchases, emprestimos, cur]);
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: 14 }}>
