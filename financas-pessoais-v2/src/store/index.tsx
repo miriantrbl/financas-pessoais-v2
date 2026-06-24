@@ -58,7 +58,7 @@ function load<T>(key: string, def: T): T {
   } catch { return def; }
 }
 
-export function AppProvider({ children }: { children: React.ReactNode }) {
+export function AppProvider({ children, userId }: { children: React.ReactNode; userId: string }) {
   const [state, setState] = useState<AppState>(() => ({
     theme: load('theme', 'light') as Theme,
     activeTab: 'inicio',
@@ -77,40 +77,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     loaded: false,
   }));
 
-  // Listen to Firestore collections
+  const u = (col: string) => `users/${userId}/${col}`;
+
+  // Listen to Firestore collections scoped to the current user
   useEffect(() => {
     const unsubs = [
-      onSnapshot(collection(db, 'incomes'), snap => {
+      onSnapshot(collection(db, u('incomes')), snap => {
         const items = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Receita[];
         setState(s => ({ ...s, incomes: items }));
       }),
-      onSnapshot(collection(db, 'expenses'), snap => {
+      onSnapshot(collection(db, u('expenses')), snap => {
         const items = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Despesa[];
         setState(s => ({ ...s, expenses: items }));
       }),
-      onSnapshot(collection(db, 'categories'), snap => {
+      onSnapshot(collection(db, u('categories')), snap => {
         const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as unknown)) as Categoria[];
         setState(s => ({ ...s, categories: items, loaded: true }));
       }),
-      onSnapshot(collection(db, 'cards'), snap => {
+      onSnapshot(collection(db, u('cards')), snap => {
         const items = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Cartao[];
         setState(s => ({ ...s, cards: items }));
       }),
-      onSnapshot(collection(db, 'purchases'), snap => {
+      onSnapshot(collection(db, u('purchases')), snap => {
         const items = snap.docs.map(d => ({ id: d.id, ...d.data() })) as CompraCartao[];
         setState(s => ({ ...s, purchases: items }));
       }),
-      onSnapshot(collection(db, 'savings'), snap => {
+      onSnapshot(collection(db, u('savings')), snap => {
         const items = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Meta[];
         setState(s => ({ ...s, savings: items }));
       }),
-      onSnapshot(collection(db, 'emprestimos'), snap => {
+      onSnapshot(collection(db, u('emprestimos')), snap => {
         const items = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Emprestimo[];
         setState(s => ({ ...s, emprestimos: items }));
       }),
     ];
-    return () => unsubs.forEach(u => u());
-  }, []);
+    return () => unsubs.forEach(un => un());
+  }, [userId]);
 
   useEffect(() => {
     localStorage.setItem('theme', JSON.stringify(state.theme));
@@ -137,23 +139,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSelectedCard: id => set({ selectedCard: id }),
     openModal: m => set({ modal: m }),
     closeModal: () => set({ modal: null }),
-    addIncome: r => { const id = uid(); setDoc(doc(db, 'incomes', id), r); },
-    removeIncome: id => deleteDoc(doc(db, 'incomes', id)),
-    addExpense: e => { const id = uid(); setDoc(doc(db, 'expenses', id), e); },
-    removeExpense: id => deleteDoc(doc(db, 'expenses', id)),
-    addCategory: c => { const id = uid(); setDoc(doc(db, 'categories', id), c); },
-    addCard: c => { const id = uid(); setDoc(doc(db, 'cards', id), c); },
-    addPurchase: p => { const id = uid(); setDoc(doc(db, 'purchases', id), p); },
-    removePurchase: id => deleteDoc(doc(db, 'purchases', id)),
-    addMeta: m => { const id = uid(); setDoc(doc(db, 'savings', id), m); },
-    updateMeta: (id, m) => updateDoc(doc(db, 'savings', id), { ...m }),
-    removeMeta: id => deleteDoc(doc(db, 'savings', id)),
+    addIncome: r => { const id = uid(); setDoc(doc(db, u('incomes'), id), r); },
+    removeIncome: id => deleteDoc(doc(db, u('incomes'), id)),
+    addExpense: e => { const id = uid(); setDoc(doc(db, u('expenses'), id), e); },
+    removeExpense: id => deleteDoc(doc(db, u('expenses'), id)),
+    addCategory: c => { const id = uid(); setDoc(doc(db, u('categories'), id), c); },
+    addCard: c => { const id = uid(); setDoc(doc(db, u('cards'), id), c); },
+    addPurchase: p => { const id = uid(); setDoc(doc(db, u('purchases'), id), p); },
+    removePurchase: id => deleteDoc(doc(db, u('purchases'), id)),
+    addMeta: m => { const id = uid(); setDoc(doc(db, u('savings'), id), m); },
+    updateMeta: (id, m) => updateDoc(doc(db, u('savings'), id), { ...m }),
+    removeMeta: id => deleteDoc(doc(db, u('savings'), id)),
     deposit: (metaId, amount) => {
       const meta = state.savings.find(m => m.id === metaId);
-      if (meta) updateDoc(doc(db, 'savings', metaId), { current: meta.current + amount });
+      if (meta) updateDoc(doc(db, u('savings'), metaId), { current: meta.current + amount });
     },
-    addEmprestimo: e => { const id = uid(); setDoc(doc(db, 'emprestimos', id), e); },
-    removeEmprestimo: id => deleteDoc(doc(db, 'emprestimos', id)),
+    addEmprestimo: e => { const id = uid(); setDoc(doc(db, u('emprestimos'), id), e); },
+    removeEmprestimo: id => deleteDoc(doc(db, u('emprestimos'), id)),
   };
 
   if (!state.loaded) {

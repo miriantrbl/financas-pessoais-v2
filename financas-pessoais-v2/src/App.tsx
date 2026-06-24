@@ -65,7 +65,7 @@ export default function App() {
   if (!user) return <Login />;
 
   return (
-    <AppProvider>
+    <AppProvider userId={user.uid}>
       <Inner user={user} />
     </AppProvider>
   );
