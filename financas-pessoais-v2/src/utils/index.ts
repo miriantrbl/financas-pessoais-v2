@@ -1,7 +1,8 @@
 export const MES_ABR = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 export const MES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-export const TODAY = { y: 2026, m: 5, d: 21 };
+const _now = new Date();
+export const TODAY = { y: _now.getFullYear(), m: _now.getMonth(), d: _now.getDate() };
 
 export function fmt(v: number): string {
   return 'R$ ' + Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
