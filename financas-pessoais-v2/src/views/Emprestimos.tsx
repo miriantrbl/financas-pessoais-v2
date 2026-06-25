@@ -1,13 +1,12 @@
 import React from 'react';
 import { useApp } from '../store';
 import { MES_ABR, fmt } from '../utils';
-import { TODAY } from '../utils';
 
 export default function Emprestimos() {
-  const { emprestimos, openModal, removeEmprestimo } = useApp();
+  const { emprestimos, openModal, removeEmprestimo, cur } = useApp();
 
   const totalDevendo = emprestimos.reduce((s, e) => {
-    const offset = (TODAY.y - e.startY) * 12 + (TODAY.m - e.startM);
+    const offset = (cur.y - e.startY) * 12 + (cur.m - e.startM);
     const pagas = Math.min(Math.max(0, offset + 1), e.installments);
     return s + (e.total - (e.total / e.installments) * pagas);
   }, 0);
@@ -48,7 +47,7 @@ export default function Emprestimos() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {emprestimos.map(e => {
-            const offset = (TODAY.y - e.startY) * 12 + (TODAY.m - e.startM);
+            const offset = (cur.y - e.startY) * 12 + (cur.m - e.startM);
             const parcelaAtual = Math.min(Math.max(1, offset + 1), e.installments);
             const pagas = Math.min(Math.max(0, offset + 1), e.installments);
             const restantes = e.installments - pagas;
