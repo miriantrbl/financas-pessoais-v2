@@ -19,6 +19,7 @@ interface AppState {
   purchases: CompraCartao[];
   savings: Meta[];
   emprestimos: Emprestimo[];
+  payments: Record<string, boolean>;
   loaded: boolean;
 }
 
@@ -47,6 +48,7 @@ interface AppActions {
   deposit: (metaId: string, amount: number) => void;
   addEmprestimo: (e: Omit<Emprestimo, 'id'>) => void;
   removeEmprestimo: (id: string) => void;
+  togglePaid: (key: string) => void;
 }
 
 const Ctx = createContext<(AppState & AppActions) | null>(null);
@@ -74,12 +76,12 @@ export function AppProvider({ children, userId }: { children: React.ReactNode; u
     purchases: [],
     savings: [],
     emprestimos: [],
+    payments: {},
     loaded: false,
   }));
 
   const u = (col: string) => `users/${userId}/${col}`;
 
-  // Listen to Firestore collections scoped to the current user
   useEffect(() => {
     const unsubs = [
       onSnapshot(collection(db, u('incomes')), snap => {
@@ -109,6 +111,11 @@ export function AppProvider({ children, userId }: { children: React.ReactNode; u
       onSnapshot(collection(db, u('emprestimos')), snap => {
         const items = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Emprestimo[];
         setState(s => ({ ...s, emprestimos: items }));
+      }),
+      onSnapshot(collection(db, u('payments')), snap => {
+        const map: Record<string, boolean> = {};
+        snap.docs.forEach(d => { map[d.data().key] = d.data().paid; });
+        setState(s => ({ ...s, payments: map }));
       }),
     ];
     return () => unsubs.forEach(un => un());
@@ -156,6 +163,11 @@ export function AppProvider({ children, userId }: { children: React.ReactNode; u
     },
     addEmprestimo: e => { const id = uid(); setDoc(doc(db, u('emprestimos'), id), e); },
     removeEmprestimo: id => deleteDoc(doc(db, u('emprestimos'), id)),
+    togglePaid: (key: string) => {
+      const paid = !state.payments[key];
+      const docId = key.replace(/[^a-zA-Z0-9]/g, '_');
+      setDoc(doc(db, u('payments'), docId), { key, paid });
+    },
   };
 
   if (!state.loaded) {
