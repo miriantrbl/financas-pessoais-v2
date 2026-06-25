@@ -63,7 +63,7 @@ export function AppProvider({ children, userId }: { children: React.ReactNode; u
     theme: load('theme', 'light') as Theme,
     activeTab: 'inicio',
     homeVariant: 'B',
-    cur: { y: 2026, m: 5 },
+    cur: { y: new Date().getFullYear(), m: new Date().getMonth() },
     filterCat: 'Todas',
     selectedCard: null,
     modal: null,
