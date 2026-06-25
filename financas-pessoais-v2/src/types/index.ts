@@ -60,6 +60,12 @@ export type Emprestimo = {
   color: string;
 };
 
+export type Pagamento = {
+  id: string;
+  key: string;
+  paid: boolean;
+};
+
 export type Tab = 'inicio' | 'receitas' | 'despesas' | 'cartoes' | 'poupanca' | 'emprestimos';
 export type Theme = 'light' | 'dark';
 export type HomeVariant = 'A' | 'B';
